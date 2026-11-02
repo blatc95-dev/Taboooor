@@ -203,7 +203,7 @@ footer{display:flex;justify-content:space-between;align-items:center;flex-wrap:w
       v: 3, workdaysOnly: s.workdaysOnly !== false,
       daily: arr(s.daily), dailyDone: obj(s.dailyDone), dailySess: obj(s.dailySess), dailySkip: obj(s.dailySkip),
       big: arr(s.big), delegated: arr(s.delegated), notes: obj(s.notes),
-      focus: (s.focus && s.focus.tpId) ? s.focus : null, run: !!s.run,
+      focus: (s.focus && s.focus.tpId) ? s.focus : null, run: !!s.run, cur: s.cur || null,
       log: Array.isArray(s.log) ? s.log : null
     };
     n.daily.forEach(function(tp){ if (!Array.isArray(tp.days) || !tp.days.length) tp.days = null; });
@@ -306,7 +306,11 @@ footer{display:flex;justify-content:space-between;align-items:center;flex-wrap:w
     return state.daily.filter(function(tp){ return !tp.stop && (tp.start > t || tp.days) && !pend.some(function(p){ return p.tp === tp; }); });
   }
   function nextOf(tp){ var t = today(); return nextDue(tp, tp.start > t ? tp.start : addDays(t, 1)); }
-  function active(){ return state.big.find(function(b){ return !b.doneAt && !b.dropped; }) || null; }
+  // the queue isn't an order: any open task can be the current one, but only one at a time
+  function active(){
+    var open = state.big.filter(function(b){ return !b.doneAt && !b.dropped; });
+    return open.find(function(b){ return b.id === state.cur; }) || open[0] || null;
+  }
   function queued(){ var a = active(); return state.big.filter(function(b){ return !b.doneAt && !b.dropped && b !== a; }); }
   function focusDaily(){
     var f = state.focus; if (!f) return null;
@@ -331,6 +335,7 @@ footer{display:flex;justify-content:space-between;align-items:center;flex-wrap:w
     else t.b.sess.push([Date.now(), null]);
     state.run = true; change();
   }
+  function switchTo(b){ closeAll(); state.focus = null; state.cur = b.id; if (!b.startedAt) b.startedAt = Date.now(); state.run = false; resume(); }
   function workOn(p){ closeAll(); state.focus = p ? {tpId: p.tp.id, date: p.date} : null; state.run = false; resume(); }
 
   function addBig(title){ state.big.push({id: uid(), title: title, createdAt: Date.now(), startedAt: null, doneAt: null, dropped: null, sess: []}); startNext(); change(); }
@@ -352,12 +357,6 @@ footer{display:flex;justify-content:space-between;align-items:center;flex-wrap:w
     state.big.splice(state.big.indexOf(b), 1);
     state.big.splice(state.big.indexOf(to) + (after ? 1 : 0), 0, b);
     change();
-  }
-  function moveQueued(b, dir){
-    var q = queued(), i = q.indexOf(b), j = i + dir;
-    if (i < 0 || j < 0 || j >= q.length) return;
-    var other = q[j], ia = state.big.indexOf(b), ib = state.big.indexOf(other);
-    state.big[ia] = other; state.big[ib] = b; change();
   }
   function addDaily(title){
     var start = today(); while (!isWork(start)) start = addDays(start, 1);
@@ -522,7 +521,6 @@ footer{display:flex;justify-content:space-between;align-items:center;flex-wrap:w
       if (tg.kind === "daily" && a) acts.append(plainBtn("link", "رجوع إلى مهمة الطابور", function(){ workOn(null); }));
       hero.append(acts);
       if (tg.kind === "daily" && a) hero.append(el("p", "next", "مهمة الطابور الحالية: " + a.title));
-      if (tg.kind === "big" && q.length) hero.append(el("p", "next", "بعدها: " + q[0].title));
       secNow.append(hero);
     } else {
       secNow.append(el("div", "now empty", pend.length
@@ -565,7 +563,7 @@ footer{display:flex;justify-content:space-between;align-items:center;flex-wrap:w
       }));
     }
     q.forEach(function(b, i){
-      colQ.list.append(card({r: {type: "big", id: b.id}, kind: "big", tag: "رقم " + (i + 1), title: b.title, nk: "b:" + b.id, drag: b.id}));
+      colQ.list.append(card({r: {type: "big", id: b.id}, kind: "big", tag: "بالانتظار", title: b.title, nk: "b:" + b.id, drag: b.id}));
     });
     colQ.box.append(addRow("big", a ? "أضف لآخر الطابور" : "أضف مهمة كبيرة", drafts.big, addBig));
     board.append(colQ.box);
@@ -762,11 +760,10 @@ footer{display:flex;justify-content:space-between;align-items:center;flex-wrap:w
         acts.append(plainBtn("secondary", "نقل إلى منتهي", function(){ openRef = null; finishBig(b, false); }));
         acts.append(armed("danger", "إخراجها من الطابور", "اضغط مرة ثانية لإخراجها", function(){ openRef = null; finishBig(b, true); }));
       } else {
-        var qq = queued(), i = qq.indexOf(b);
-        facts.push("رقم " + (i + 1) + " في الطابور، أُضيفت " + label(keyOf(b.createdAt)));
-        var up = plainBtn("secondary", "تقديمها", function(){ moveQueued(b, -1); }); up.disabled = i <= 0;
-        var dn = plainBtn("secondary", "تأخيرها", function(){ moveQueued(b, 1); }); dn.disabled = i >= qq.length - 1;
-        acts.append(up, dn);
+        var bd2 = sessDays(b.sess);
+        facts.push("في الطابور، أُضيفت " + label(keyOf(b.createdAt)));
+        if (bd2) facts.push("اشتغلت عليها " + workDays(bd2) + " (" + dur(sessMs(b.sess)) + ")");
+        acts.append(plainBtn("primary", "اشتغل عليها بدل الحالية", function(){ switchTo(b); }));
         acts.append(plainBtn("secondary", "نقل إلى منتهي", function(){ openRef = null; finishBig(b, false); }));
         acts.append(armed("danger", "حذف", "اضغط مرة ثانية للحذف", function(){ openRef = null; removeBig(b); }));
       }
@@ -885,7 +882,7 @@ footer{display:flex;justify-content:space-between;align-items:center;flex-wrap:w
   function since(ts){
     if (!ts) return "";
     var k = keyOf(ts);
-    return k === today() ? "جاء دورها اليوم" : "جاء دورها " + label(k);
+    return k === today() ? "بدأتها اليوم" : "بدأتها " + label(k);
   }
   function cssEsc(s){ return s.replace(/["\\]/g, "\\$&"); }
 
