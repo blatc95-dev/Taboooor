@@ -1,0 +1,836 @@
+<!doctype html>
+<html lang="ar" dir="rtl">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>الطابور</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans+Arabic:wght@300;400;500;600&display=swap" rel="stylesheet">
+<style>
+:root{
+  --bg:#F4F5F3; --sheet:#FFFFFF; --ink:#1F2623; --muted:#737D78; --faint:#B3BAB6; --line:#E3E7E4;
+  --accent:#2F7D6D; --accent-soft:#E4F0EC; --on-accent:#FFFFFF; --warn:#AE7124; --warn-soft:#F7EEDF;
+  --deleg:#4D6A9E; --deleg-soft:#E8EDF6; --danger:#B4533F;
+  color-scheme:light;
+  box-sizing:border-box;
+  padding-top:env(safe-area-inset-top,0px);
+  padding-bottom:env(safe-area-inset-bottom,0px);
+}
+@media (prefers-color-scheme: dark){
+  :root:not([data-theme="light"]){
+    --bg:#121514; --sheet:#1B1F1D; --ink:#E5EAE7; --muted:#8F9994; --faint:#56605B; --line:#2A302D;
+    --accent:#6FC0AA; --accent-soft:#1D2E29; --on-accent:#0F1A17; --warn:#E0A95A; --warn-soft:#2E2618;
+    --deleg:#93AEDD; --deleg-soft:#1E2533; --danger:#E48A75; color-scheme:dark;
+  }
+}
+:root[data-theme="dark"]{
+  --bg:#121514; --sheet:#1B1F1D; --ink:#E5EAE7; --muted:#8F9994; --faint:#56605B; --line:#2A302D;
+  --accent:#6FC0AA; --accent-soft:#1D2E29; --on-accent:#0F1A17; --warn:#E0A95A; --warn-soft:#2E2618;
+  --deleg:#93AEDD; --deleg-soft:#1E2533; --danger:#E48A75; color-scheme:dark;
+}
+*,*::before,*::after{box-sizing:inherit}
+[hidden]{display:none!important}
+html{scroll-padding-top:env(safe-area-inset-top,0px)}
+body{margin:0;background:var(--bg);color:var(--ink);font-family:"IBM Plex Sans Arabic","Segoe UI",Tahoma,system-ui,sans-serif;font-size:16px;line-height:1.65;-webkit-font-smoothing:antialiased}
+body.locked{overflow:hidden}
+main{max-width:1040px;margin:0 auto;padding:40px 20px 64px;display:flex;flex-direction:column;gap:34px}
+button{font:inherit;color:inherit;cursor:pointer}
+button:disabled{opacity:.4;cursor:default}
+:focus-visible{outline:2px solid var(--accent);outline-offset:2px;border-radius:6px}
+
+header{display:flex;align-items:baseline;justify-content:space-between;gap:12px;flex-wrap:wrap}
+h1{font-size:1.9rem;font-weight:600;margin:0;line-height:1.2}
+.date{color:var(--muted);font-size:.92rem}
+.loading{color:var(--muted)}
+h2{font-size:.88rem;font-weight:500;color:var(--muted);margin:0 0 12px;display:flex;justify-content:space-between;align-items:baseline;gap:10px}
+h2 small{font-weight:400;font-size:.8rem}
+h2 small.warn{color:var(--warn)}
+
+/* now */
+.nowsec{max-width:720px}
+.now{background:var(--sheet);border-radius:18px;padding:22px 24px 18px;border:1px solid var(--line);border-inline-start:5px solid var(--accent)}
+.now.daily{border-inline-start-color:var(--warn)}
+.now.paused{border-inline-start-color:var(--faint)}
+.now .kind{font-size:.8rem;color:var(--accent);font-weight:500;margin:0 0 2px}
+.now.daily .kind{color:var(--warn)}
+.now .title{display:block;width:100%;text-align:start;background:none;border:0;padding:0;font-size:1.5rem;font-weight:600;line-height:1.45;margin:0 0 8px;overflow-wrap:anywhere}
+.now .title:hover{color:var(--accent)}
+.now .state{font-size:.9rem;margin:0 0 2px;display:flex;align-items:center;gap:8px;color:var(--muted)}
+.now .state::before{content:"";flex:none;width:8px;height:8px;border-radius:50%;background:var(--faint)}
+.now.running .state{color:var(--accent);font-weight:500}
+.now.running .state::before{background:var(--accent);box-shadow:0 0 0 4px var(--accent-soft)}
+.now .since{color:var(--muted);font-size:.88rem;margin:0}
+.now .acts{display:flex;align-items:center;justify-content:space-between;gap:12px;margin-top:18px;flex-wrap:wrap}
+.now .grp{display:flex;gap:8px;align-items:center;flex-wrap:wrap}
+.now .next{color:var(--muted);font-size:.85rem;margin:14px 0 0;padding-top:12px;border-top:1px solid var(--line);overflow-wrap:anywhere}
+.now.empty{border-inline-start-color:var(--line);color:var(--muted)}
+
+.primary{background:var(--accent);color:var(--on-accent);border:1px solid var(--accent);border-radius:99px;padding:7px 18px;font-weight:500}
+.primary.small{padding:5px 14px;font-size:.88rem}
+.secondary{border:1px solid var(--line);background:var(--sheet);border-radius:99px;padding:7px 16px}
+.secondary:hover:not(:disabled){border-color:var(--accent);color:var(--accent)}
+.secondary.armed,.danger.armed{border-color:var(--ink);background:var(--ink);color:var(--bg)}
+.danger{border:1px solid transparent;background:none;border-radius:99px;padding:7px 12px;color:var(--danger)}
+.danger:hover{border-color:var(--danger)}
+.danger.armed{background:var(--danger);border-color:var(--danger);color:#fff}
+.link{background:none;border:0;padding:0;color:var(--muted);font-size:.86rem;text-decoration:underline;text-underline-offset:3px}
+.link:hover{color:var(--ink)}
+
+/* board */
+.board{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:22px;align-items:start}
+@media (max-width:860px){.board{grid-template-columns:1fr}}
+.stack{display:flex;flex-direction:column;gap:10px}
+.card{position:relative;background:var(--sheet);border:1px solid var(--line);border-radius:14px;padding:12px 14px 10px;cursor:pointer;display:flex;flex-direction:column;gap:6px;transition:border-color .15s}
+.card:hover{border-color:var(--faint)}
+.card.cur{border-color:var(--accent);box-shadow:inset 0 0 0 1px var(--accent)}
+.card.k-daily.cur{border-color:var(--warn);box-shadow:inset 0 0 0 1px var(--warn)}
+.card.later{opacity:.7}
+.ctop{display:flex;justify-content:space-between;gap:8px;font-size:.76rem}
+.ctag{font-weight:500;color:var(--muted)}
+.k-daily .ctag{color:var(--warn)}
+.k-big .ctag{color:var(--accent)}
+.k-deleg .ctag{color:var(--deleg)}
+.card.head .ctag{background:var(--accent-soft);border-radius:99px;padding:0 8px}
+.cmeta{color:var(--muted);white-space:nowrap}
+.cmeta.old{color:var(--warn);font-weight:500}
+.ctitle{margin:0;font-size:1rem;font-weight:500;line-height:1.55;overflow-wrap:anywhere;display:-webkit-box;-webkit-line-clamp:3;-webkit-box-orient:vertical;overflow:hidden}
+.cbot{display:flex;align-items:center;gap:8px;min-height:24px}
+.cinfo{flex:1;min-width:0;font-size:.78rem;color:var(--muted)}
+.badge{font-size:.74rem;font-weight:600;color:var(--accent)}
+.k-daily .badge{color:var(--warn)}
+.quick{flex:none;width:26px;height:26px;border-radius:50%;border:1.5px solid var(--faint);background:transparent;color:transparent;font-size:12px;line-height:1;padding:0;display:grid;place-items:center}
+.quick:hover{border-color:var(--accent);background:var(--accent);color:var(--on-accent)}
+.card.fin .ctitle{color:var(--muted)}
+.card.k-dropped .ctitle{text-decoration:line-through}
+
+.add{display:flex;align-items:center;gap:8px;border:1px dashed var(--faint);border-radius:14px;padding:4px 12px;margin-top:10px;background:transparent}
+.add:focus-within{border-style:solid;border-color:var(--accent);background:var(--sheet)}
+.add .plus{flex:none;color:var(--faint)}
+.add input[type=text]{flex:1;min-width:0;border:0;background:transparent;font:inherit;font-size:.92rem;color:var(--ink);padding:8px 0;outline:none}
+.add input::placeholder{color:var(--muted)}
+.add.two{flex-wrap:wrap}
+.add input.whoin[type=text]{flex:0 0 34%;border-inline-start:1px solid var(--line);padding-inline-start:10px}
+
+/* finished */
+.donesec h2 small{color:var(--faint)}
+.dayh{font-size:.8rem;font-weight:500;color:var(--muted);margin:18px 0 8px}
+.grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(220px,1fr));gap:10px}
+.empty-row{color:var(--muted);font-weight:300;margin:0}
+.more{margin-top:14px}
+
+.backup{display:flex;gap:14px;flex-wrap:wrap}
+footer{display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:12px;color:var(--muted);font-size:.82rem}
+.opt{display:flex;align-items:center;gap:8px}
+.opt input{accent-color:var(--accent);width:16px;height:16px}
+
+/* panel */
+.overlay{position:fixed;inset:0;z-index:50;display:flex;align-items:center;justify-content:center;padding:20px}
+.scrim{position:absolute;inset:0;background:rgb(15 20 18 / .38)}
+.panel{position:relative;width:min(560px,100%);max-height:min(88vh,860px);background:var(--sheet);border-radius:18px;display:flex;flex-direction:column;overflow:hidden;border:1px solid var(--line)}
+.phead{flex:none;display:flex;justify-content:space-between;align-items:center;padding:14px 20px 0}
+.pkind{font-size:.8rem;color:var(--muted);font-weight:500}
+.close{border:0;background:none;font-size:1.5rem;line-height:1;padding:4px 8px;color:var(--muted);border-radius:8px}
+.close:hover{color:var(--ink);background:var(--bg)}
+.pbody{overflow-y:auto;padding:4px 20px 22px}
+.ptitle{width:100%;border:1px solid transparent;border-radius:10px;background:transparent;font:inherit;font-size:1.3rem;font-weight:600;line-height:1.5;color:var(--ink);padding:4px 8px;margin:0 -8px;resize:none;field-sizing:content;min-height:2.2em}
+.ptitle:hover{border-color:var(--line)}
+.ptitle:focus{outline:none;border-color:var(--accent)}
+.facts{list-style:none;margin:6px 0 0;padding:0;color:var(--muted);font-size:.88rem}
+.pacts{display:flex;flex-wrap:wrap;gap:8px;margin-top:16px}
+.notes{margin-top:22px;border-top:1px solid var(--line);padding-top:16px}
+.notes h4{margin:0 0 10px;font-size:.85rem;font-weight:500;color:var(--muted)}
+.notes ul{list-style:none;margin:0 0 12px;padding:0;display:flex;flex-direction:column;gap:10px}
+.notes li{background:var(--bg);border-radius:12px;padding:10px 12px}
+.nmeta{display:flex;justify-content:space-between;gap:8px;font-size:.74rem;color:var(--muted)}
+.ndel{border:0;background:none;padding:0;font-size:.74rem;color:var(--faint)}
+.ndel:hover,.ndel.armed{color:var(--danger)}
+.ntext{margin:4px 0 0;white-space:pre-wrap;overflow-wrap:anywhere;line-height:1.75}
+.nin{width:100%;border:1px solid var(--line);border-radius:12px;background:var(--sheet);font:inherit;color:var(--ink);padding:10px 12px;resize:vertical;line-height:1.7}
+.nin:focus{outline:none;border-color:var(--accent)}
+.nrow{display:flex;justify-content:space-between;align-items:center;gap:10px;margin-top:8px}
+.hint{font-size:.74rem;color:var(--faint)}
+@media (max-width:600px){
+  .overlay{align-items:flex-end;padding:0}
+  .panel{width:100%;max-height:92vh;border-radius:18px 18px 0 0;padding-bottom:env(safe-area-inset-bottom,0px)}
+  .hint{display:none}
+}
+@media (prefers-reduced-motion:reduce){*{transition:none!important}}
+</style>
+</head>
+<body>
+<main id="root"></main>
+<script id="seed" type="application/json">{"v":3,"workdaysOnly":true,"daily":[{"id":"mvyz6q8wp82jc","title":"البنش مارك: كتابة خمسة أسئلة","start":"2026-11-02","stop":null},{"id":"mvyzerwbqdaw3","title":"مراجعة ١٥ سؤال في التقييمات","start":"2026-11-02","stop":null},{"id":"mvyzexi767w2p","title":"الاجتماع الأسبوعي مع الفريق","start":"2026-11-02","stop":null}],"dailyDone":{},"dailySess":{"mvyz6q8wp82jc|2026-11-02":[[1793608380109,1793608396955],[1793608977355,1793608980384]],"mvyzerwbqdaw3|2026-11-02":[[1793608406336,1793608414000],[1793608980385,1793608982569]]},"big":[{"id":"mvyz680whpsat","title":"نختبر العرض الوجيز في محرك البحث","createdAt":1793606789408,"startedAt":1793606789408,"doneAt":1793607928873,"dropped":null,"sess":[]},{"id":"mvyz7f6d3gm7x","title":"اختبار رحلة التنفيذ في منتج إدارة القضايا","createdAt":1793606845333,"startedAt":1793607928873,"doneAt":null,"dropped":null,"sess":[[1793607928873,1793607928873],[1793608396955,1793608400516]]},{"id":"mvyz76v3q09df","title":"مذكرة ديوان المظالم: الاعتراض","createdAt":1793606834559,"startedAt":null,"doneAt":null,"dropped":null,"sess":[]}],"delegated":[{"id":"mvyzt62m2zw2j","title":"نختبر العرض الوجيز في محرك البحثة","who":"ذكرى","createdAt":1793607859966,"followed":null,"doneAt":null},{"id":"mvyztfa6az35w","title":"فرضية الملفات المرفوعة والخروج عن السياق","who":"مؤيد","createdAt":1793607871902,"followed":null,"doneAt":null}],"notes":{},"focus":{"tpId":"mvyzerwbqdaw3","date":"2026-11-02"},"run":false,"log":[{"id":"mvyzzyjd3n9e6","kind":"big","ref":"mvyz680whpsat","title":"نختبر العرض الوجيز في محرك البحث","doneAt":1793607928873,"days":1,"nk":"b:mvyz680whpsat"}]}</script>
+<script>
+(function(){
+  var KEY = "queue-v3", TZ = "Asia/Riyadh", DAY = 86400000;
+  var state = normalize(null);
+  var mode = "pending", loaded = false, ref = null;
+  var timer = null, writing = false, again = false, lastJson = null;
+  var openRef = null, showAllDone = false;
+  var root = document.getElementById("root");
+
+  // ---------- model ----------
+  function arr(x){ return Array.isArray(x) ? x : []; }
+  function obj(x){ return (x && typeof x === "object" && !Array.isArray(x)) ? x : {}; }
+  function normalize(s){
+    s = obj(s);
+    var n = {
+      v: 3, workdaysOnly: s.workdaysOnly !== false,
+      daily: arr(s.daily), dailyDone: obj(s.dailyDone), dailySess: obj(s.dailySess),
+      big: arr(s.big), delegated: arr(s.delegated), notes: obj(s.notes),
+      focus: (s.focus && s.focus.tpId) ? s.focus : null, run: !!s.run,
+      log: Array.isArray(s.log) ? s.log : null
+    };
+    n.big.forEach(function(b){ if (!Array.isArray(b.sess)) b.sess = b.startedAt && !b.doneAt && !b.dropped ? [[b.startedAt, b.startedAt]] : []; });
+    if (!n.log) {
+      n.log = [];
+      n.big.forEach(function(b){
+        if (b.doneAt) n.log.push({id: uid(), kind: "big", ref: b.id, title: b.title, doneAt: b.doneAt, days: countWork(keyOf(b.startedAt || b.createdAt), keyOf(b.doneAt), n.workdaysOnly)});
+        else if (b.dropped) n.log.push({id: uid(), kind: "dropped", ref: b.id, title: b.title, doneAt: b.dropped, days: 0});
+      });
+      Object.keys(n.dailyDone).forEach(function(k){
+        var id = k.slice(0, k.lastIndexOf("|")), tp = n.daily.find(function(x){ return x.id === id; });
+        if (tp) n.log.push({id: uid(), kind: "daily", ref: k, title: tp.title, doneAt: n.dailyDone[k], days: 0});
+      });
+      n.delegated.forEach(function(d){
+        if (d.doneAt) n.log.push({id: uid(), kind: "deleg", ref: d.id, title: d.title, who: d.who, doneAt: d.doneAt, days: countWork(keyOf(d.createdAt), keyOf(d.doneAt), n.workdaysOnly)});
+      });
+    }
+    n.log.forEach(function(e){ if (!e.nk) e.nk = (e.kind === "daily" ? "d:" : e.kind === "deleg" ? "g:" : "b:") + e.ref; });
+    return n;
+  }
+
+  // ---------- dates (Riyadh) ----------
+  function keyOf(ts){ return new Date(ts).toLocaleDateString("en-CA", {timeZone: TZ}); }
+  function today(){ return keyOf(Date.now()); }
+  function parseKey(k){ var p = k.split("-"); return Date.UTC(+p[0], +p[1]-1, +p[2]); }
+  function addDays(k, n){ return new Date(parseKey(k) + n*DAY).toISOString().slice(0,10); }
+  function dow(k){ return new Date(parseKey(k)).getUTCDay(); }
+  function isWork(k, only){ if (only === undefined) only = state ? state.workdaysOnly : true; return !only || dow(k) <= 4; }
+  function prevWork(k){ var d = addDays(k, -1); for (var i=0;i<7 && !isWork(d);i++) d = addDays(d, -1); return d; }
+  function label(k){
+    var t = today();
+    if (k === t) return "اليوم";
+    if (k === addDays(t, -1)) return "أمس";
+    if (k === prevWork(t)) return "آخر يوم عمل";
+    return new Intl.DateTimeFormat("ar", {weekday:"long", day:"numeric", month:"long", timeZone:"UTC"}).format(new Date(parseKey(k)));
+  }
+  function clock(ts){ return new Intl.DateTimeFormat("ar", {hour:"numeric", minute:"2-digit", timeZone: TZ}).format(new Date(ts)); }
+  function countWork(a, b, only){
+    var n = 0, d = a, i = 0;
+    while (d <= b && i < 1000) { if (isWork(d, only)) n++; d = addDays(d, 1); i++; }
+    return Math.max(1, n);
+  }
+  function workDays(n){
+    if (n === 1) return "يوم عمل واحد";
+    if (n === 2) return "يومَي عمل";
+    if (n <= 10) return n + " أيام عمل";
+    return n + " يوم عمل";
+  }
+  function dur(ms){
+    var m = Math.round(ms / 60000);
+    if (m < 1) return "أقل من دقيقة";
+    var h = Math.floor(m / 60); m = m % 60;
+    if (!h) return m + " دقيقة";
+    return h + " ساعة" + (m ? " و" + m + " دقيقة" : "");
+  }
+
+  // ---------- sessions ----------
+  function sessDays(sess){
+    var set = {}, now = Date.now();
+    sess.forEach(function(s){
+      var a = keyOf(s[0]), b = keyOf(s[1] == null ? now : s[1]), d = a, i = 0;
+      while (d <= b && i < 400) { if (isWork(d)) set[d] = 1; d = addDays(d, 1); i++; }
+    });
+    return Object.keys(set).length;
+  }
+  function sessMs(sess){ var now = Date.now(); return sess.reduce(function(t, s){ return t + ((s[1] == null ? now : s[1]) - s[0]); }, 0); }
+  function openOf(sess){ var l = sess[sess.length - 1]; return l && l[1] == null ? l : null; }
+  function dsess(k){ return state.dailySess[k] || []; }
+  function closeAll(){
+    var now = Date.now();
+    state.big.forEach(function(b){ b.sess.forEach(function(s){ if (s[1] == null) s[1] = now; }); });
+    Object.keys(state.dailySess).forEach(function(k){ state.dailySess[k].forEach(function(s){ if (s[1] == null) s[1] = now; }); });
+  }
+
+  // ---------- derived ----------
+  function pendingDaily(){
+    var t = today(), out = [];
+    state.daily.forEach(function(tp){
+      var end = tp.stop && tp.stop < t ? tp.stop : t;
+      var d = tp.start, n = 0;
+      while (d <= end && n < 500) {
+        if (isWork(d) && !state.dailyDone[tp.id + "|" + d]) out.push({tp: tp, date: d, k: tp.id + "|" + d});
+        d = addDays(d, 1); n++;
+      }
+    });
+    out.sort(function(a,b){ return a.date < b.date ? -1 : a.date > b.date ? 1 : 0; });
+    return out;
+  }
+  function upcoming(){
+    var t = today(), pend = pendingDaily();
+    return state.daily.filter(function(tp){ return !tp.stop && tp.start > t && !pend.some(function(p){ return p.tp === tp; }); });
+  }
+  function active(){ return state.big.find(function(b){ return !b.doneAt && !b.dropped; }) || null; }
+  function queued(){ var a = active(); return state.big.filter(function(b){ return !b.doneAt && !b.dropped && b !== a; }); }
+  function focusDaily(){
+    var f = state.focus; if (!f) return null;
+    return pendingDaily().find(function(p){ return p.tp.id === f.tpId && p.date === f.date; }) || null;
+  }
+  function target(){
+    var fd = focusDaily(); if (fd) return {kind: "daily", p: fd, sess: dsess(fd.k)};
+    var a = active(); if (a) return {kind: "big", b: a, sess: a.sess};
+    return null;
+  }
+  function running(){ var t = target(); return !!t && state.run && !!openOf(t.sess); }
+  function notesOf(nk){ return arr(state.notes[nk]); }
+
+  // ---------- actions ----------
+  function log(e){ e.id = uid(); state.log.push(e); }
+  function startNext(){ var a = active(); if (a && !a.startedAt) a.startedAt = Date.now(); }
+  function pause(){ closeAll(); state.run = false; change(); }
+  function resume(){
+    var t = target(); if (!t) return;
+    closeAll();
+    if (t.kind === "daily") { if (!state.dailySess[t.p.k]) state.dailySess[t.p.k] = []; state.dailySess[t.p.k].push([Date.now(), null]); }
+    else t.b.sess.push([Date.now(), null]);
+    state.run = true; change();
+  }
+  function workOn(p){ closeAll(); state.focus = p ? {tpId: p.tp.id, date: p.date} : null; state.run = false; resume(); }
+
+  function addBig(title){ state.big.push({id: uid(), title: title, createdAt: Date.now(), startedAt: null, doneAt: null, dropped: null, sess: []}); startNext(); change(); }
+  function finishBig(b, dropped){
+    var wasActive = b === active();
+    if (wasActive) closeAll();
+    var now = Date.now();
+    if (dropped) b.dropped = now; else b.doneAt = now;
+    var days = sessDays(b.sess);
+    if (!dropped && !days && b.startedAt) days = countWork(keyOf(b.startedAt), today());
+    log({kind: dropped ? "dropped" : "big", ref: b.id, nk: "b:" + b.id, title: b.title, doneAt: now, days: days, ms: sessMs(b.sess)});
+    if (wasActive && !state.focus) state.run = false;
+    startNext(); change();
+  }
+  function removeBig(b){ state.big = state.big.filter(function(x){ return x !== b; }); delete state.notes["b:" + b.id]; change(); }
+  function moveQueued(b, dir){
+    var q = queued(), i = q.indexOf(b), j = i + dir;
+    if (i < 0 || j < 0 || j >= q.length) return;
+    var other = q[j], ia = state.big.indexOf(b), ib = state.big.indexOf(other);
+    state.big[ia] = other; state.big[ib] = b; change();
+  }
+  function addDaily(title){
+    var start = today(); while (!isWork(start)) start = addDays(start, 1);
+    state.daily.push({id: uid(), title: title, start: start, stop: null}); change();
+  }
+  function finishDaily(p){
+    if (state.focus && state.focus.tpId === p.tp.id && state.focus.date === p.date) { closeAll(); state.focus = null; state.run = false; }
+    var now = Date.now(); state.dailyDone[p.k] = now;
+    log({kind: "daily", ref: p.k, nk: "d:" + p.k, title: p.tp.title, doneAt: now, days: sessDays(dsess(p.k)), ms: sessMs(dsess(p.k))});
+    change();
+  }
+  function deleteDaily(tp){
+    if (state.focus && state.focus.tpId === tp.id) { closeAll(); state.focus = null; state.run = false; }
+    state.daily = state.daily.filter(function(x){ return x !== tp; });
+    var logged = {}; state.log.forEach(function(e){ logged[e.nk] = 1; });
+    [state.dailyDone, state.dailySess].forEach(function(o){ Object.keys(o).forEach(function(k){ if (k.indexOf(tp.id + "|") === 0) delete o[k]; }); });
+    Object.keys(state.notes).forEach(function(k){ if (k.indexOf("d:" + tp.id + "|") === 0 && !logged[k]) delete state.notes[k]; });
+    change();
+  }
+  function addDelegated(title, who){ state.delegated.push({id: uid(), title: title, who: who, createdAt: Date.now(), followed: null, doneAt: null}); change(); }
+  function followUp(d){ d.followed = Date.now(); change(); }
+  function finishDeleg(d){
+    var now = Date.now(); d.doneAt = now;
+    log({kind: "deleg", ref: d.id, nk: "g:" + d.id, title: d.title, who: d.who, doneAt: now, days: countWork(keyOf(d.createdAt), today())});
+    change();
+  }
+  function removeDeleg(d){ state.delegated = state.delegated.filter(function(x){ return x !== d; }); delete state.notes["g:" + d.id]; change(); }
+  function canUndo(e){
+    if (e.kind === "daily") { var id = e.ref.slice(0, e.ref.lastIndexOf("|")); return state.daily.some(function(x){ return x.id === id; }); }
+    if (e.kind === "deleg") return state.delegated.some(function(x){ return x.id === e.ref; });
+    return state.big.some(function(x){ return x.id === e.ref; });
+  }
+  function undoLog(e){
+    if (e.kind === "daily") delete state.dailyDone[e.ref];
+    else if (e.kind === "deleg") { var d = state.delegated.find(function(x){ return x.id === e.ref; }); if (d) d.doneAt = null; }
+    else {
+      var b = state.big.find(function(x){ return x.id === e.ref; });
+      if (b) { b.doneAt = null; b.dropped = null; state.big = state.big.filter(function(x){ return x !== b; }); state.big.push(b); startNext(); }
+    }
+    state.log = state.log.filter(function(x){ return x !== e; });
+    change();
+  }
+  function addNote(nk, text){ if (!state.notes[nk]) state.notes[nk] = []; state.notes[nk].push({id: uid(), at: Date.now(), text: text}); change(); }
+  function delNote(nk, n){ state.notes[nk] = notesOf(nk).filter(function(x){ return x !== n; }); if (!state.notes[nk].length) delete state.notes[nk]; change(); }
+  function rename(item, v){
+    if (item.type === "daily") item.p.tp.title = v;
+    else if (item.type === "up") item.tp.title = v;
+    else if (item.type === "big") item.b.title = v;
+    else if (item.type === "deleg") item.d.title = v;
+    else if (item.type === "log") item.e.title = v;
+    change();
+  }
+
+  // ---------- items ----------
+  function resolve(r){
+    if (!r) return null;
+    if (r.type === "daily") { var p = pendingDaily().find(function(x){ return x.k === r.id; }); return p ? {type: "daily", p: p, nk: "d:" + p.k, title: p.tp.title} : null; }
+    if (r.type === "up") { var tp = state.daily.find(function(x){ return x.id === r.id; }); return tp ? {type: "up", tp: tp, nk: "t:" + tp.id, title: tp.title} : null; }
+    if (r.type === "big") { var b = state.big.find(function(x){ return x.id === r.id && !x.doneAt && !x.dropped; }); return b ? {type: "big", b: b, nk: "b:" + b.id, title: b.title} : null; }
+    if (r.type === "deleg") { var d = state.delegated.find(function(x){ return x.id === r.id && !x.doneAt; }); return d ? {type: "deleg", d: d, nk: "g:" + d.id, title: d.title} : null; }
+    if (r.type === "log") { var e = state.log.find(function(x){ return x.id === r.id; }); return e ? {type: "log", e: e, nk: e.nk, title: e.title} : null; }
+    return null;
+  }
+  function open(r){ openRef = r; render(); setTimeout(function(){ var c = document.querySelector(".panel .close"); if (c) c.focus(); }, 0); }
+  function closePanel(){ openRef = null; render(); }
+
+  // ---------- render ----------
+  function render(){
+    var drafts = {}, focusK = null, selStart = null;
+    root.querySelectorAll("[data-k]").forEach(function(i){ if ("value" in i) drafts[i.dataset.k] = i.value; });
+    var ae = document.activeElement;
+    if (ae && ae.dataset && ae.dataset.k) { focusK = ae.dataset.k; try { selStart = ae.selectionStart; } catch(e) {} }
+    var pnl = root.querySelector(".panel .pbody"), pScroll = pnl ? pnl.scrollTop : 0;
+
+    var frag = document.createDocumentFragment();
+    var hd = el("header");
+    hd.append(el("h1", null, "الطابور"),
+      el("span", "date", new Intl.DateTimeFormat("ar", {weekday:"long", day:"numeric", month:"long", timeZone: TZ}).format(new Date())));
+    frag.append(hd);
+    if (!loaded) { frag.append(el("p", "loading", "جارٍ تحميل مهامك…")); root.replaceChildren(frag); return; }
+
+    var t = today(), a = active(), q = queued(), pend = pendingDaily(), tg = target(), run = running(), fd = focusDaily();
+
+    // ----- now -----
+    var secNow = el("section", "nowsec");
+    secNow.append(el("h2", null, "أشتغل الآن على"));
+    if (tg) {
+      var hero = el("div", "now" + (tg.kind === "daily" ? " daily" : "") + (run ? " running" : " paused"));
+      var title = tg.kind === "daily" ? tg.p.tp.title : tg.b.title;
+      var nk = tg.kind === "daily" ? "d:" + tg.p.k : "b:" + tg.b.id;
+      hero.append(el("p", "kind", tg.kind === "daily" ? "مهمة يومية" : "من الطابور"));
+      var ht = el("button", "title", title); ht.type = "button"; ht.title = "افتح البطاقة";
+      ht.addEventListener("click", function(){ open(tg.kind === "daily" ? {type: "daily", id: tg.p.k} : {type: "big", id: tg.b.id}); });
+      hero.append(ht);
+      var rl = el("p", "state"); rl.id = "runline"; rl.textContent = runText(tg, run); hero.append(rl);
+      hero.append(el("p", "since", metaText(tg)));
+      var acts = el("div", "acts"), grp = el("div", "grp");
+      var days = sessDays(tg.sess);
+      var tgl = el("button", "primary", run ? "إيقاف مؤقت" : (days ? "أكمل" : "ابدأ")); tgl.type = "button";
+      tgl.addEventListener("click", run ? pause : resume);
+      grp.append(tgl);
+      if (tg.kind === "daily") grp.append(plainBtn("secondary", "نقل إلى منتهي", function(){ finishDaily(tg.p); }));
+      else grp.append(armed("secondary", "نقل إلى منتهي", "متأكد؟ اضغط مرة ثانية", function(){ finishBig(tg.b, false); }));
+      var nc = notesOf(nk).length;
+      grp.append(plainBtn("secondary", nc ? "الملاحظات (" + nc + ")" : "ملاحظات", function(){ open(tg.kind === "daily" ? {type: "daily", id: tg.p.k} : {type: "big", id: tg.b.id}); }));
+      acts.append(grp);
+      if (tg.kind === "daily" && a) acts.append(plainBtn("link", "رجوع إلى مهمة الطابور", function(){ workOn(null); }));
+      hero.append(acts);
+      if (tg.kind === "daily" && a) hero.append(el("p", "next", "مهمة الطابور الحالية: " + a.title));
+      if (tg.kind === "big" && q.length) hero.append(el("p", "next", "بعدها: " + q[0].title));
+      secNow.append(hero);
+    } else {
+      secNow.append(el("div", "now empty", pend.length
+        ? "الطابور فاضي. افتح مهمة يومية واضغط «اشتغل عليها»، أو أضف مهمة كبيرة للطابور."
+        : "لا شيء الآن. أضف مهمة كبيرة للطابور أو مهمة يومية."));
+    }
+    frag.append(secNow);
+
+    // ----- board -----
+    var board = el("div", "board");
+
+    // daily column
+    var old = pend.filter(function(p){ return p.date < t; }).length;
+    var colD = column("اليومية", old ? ["warn", "متراكم: " + old] : pend.length ? [null, "متبقٍ " + pend.length] : null);
+    pend.forEach(function(p){
+      var cur = fd && fd.k === p.k;
+      colD.list.append(card({
+        r: {type: "daily", id: p.k}, kind: "daily", tag: "يومية", title: p.tp.title,
+        meta: p.date < t ? "من " + label(p.date) : "اليوم", metaCls: p.date < t ? "old" : "",
+        sub: sessDays(dsess(p.k)) ? "اشتغلت " + workDays(sessDays(dsess(p.k))) : "",
+        nk: "d:" + p.k, cur: cur, badge: cur ? (run ? "الآن" : "متوقفة") : "",
+        quick: function(){ finishDaily(p); }
+      }));
+    });
+    upcoming().forEach(function(tp){
+      colD.list.append(card({r: {type: "up", id: tp.id}, kind: "daily", tag: "يومية", title: tp.title, meta: "تبدأ " + label(tp.start), nk: "t:" + tp.id, cls: "later"}));
+    });
+    colD.box.append(addRow("daily", "مهمة يومية جديدة", drafts.daily, addDaily));
+    board.append(colD.box);
+
+    // queue column
+    var colQ = column("الطابور", q.length ? [null, q.length + " بالانتظار"] : null);
+    if (a) {
+      var ad = sessDays(a.sess), isCur = !fd;
+      colQ.list.append(card({
+        r: {type: "big", id: a.id}, kind: "big", tag: "الحالية", title: a.title,
+        meta: ad ? "اشتغلت " + workDays(ad) : "لم تبدأ بعد",
+        nk: "b:" + a.id, cur: isCur, badge: isCur ? (run ? "الآن" : "متوقفة") : "", cls: "head"
+      }));
+    }
+    q.forEach(function(b, i){
+      colQ.list.append(card({r: {type: "big", id: b.id}, kind: "big", tag: "رقم " + (i + 1), title: b.title, nk: "b:" + b.id}));
+    });
+    colQ.box.append(addRow("big", a ? "أضف لآخر الطابور" : "أضف مهمة كبيرة", drafts.big, addBig));
+    board.append(colQ.box);
+
+    // delegated column
+    var openG = state.delegated.filter(function(d){ return !d.doneAt; });
+    var stale = openG.filter(function(d){ return countWork(keyOf(d.followed || d.createdAt), t) - 1 >= 3; }).length;
+    var colG = column("عند غيري", stale ? ["warn", "تحتاج متابعة: " + stale] : openG.length ? [null, openG.length + " بانتظار التسليم"] : null);
+    openG.forEach(function(d){
+      var lastK = keyOf(d.followed || d.createdAt), gap = countWork(lastK, t) - 1;
+      colG.list.append(card({
+        r: {type: "deleg", id: d.id}, kind: "deleg", tag: "عند " + d.who, title: d.title,
+        meta: "يوم العمل " + countWork(keyOf(d.createdAt), t), metaCls: gap >= 3 ? "old" : "",
+        sub: d.followed ? "تابعت " + label(lastK) : "لم تتابع بعد",
+        nk: "g:" + d.id, quick: function(){ finishDeleg(d); }, quickLabel: "استلمتها"
+      }));
+    });
+    colG.box.append(addDelegRow(drafts));
+    board.append(colG.box);
+    frag.append(board);
+
+    // ----- finished -----
+    var secF = el("section", "donesec");
+    var h2f = el("h2", null, "منتهي"); h2f.append(el("small", null, String(state.log.length)));
+    secF.append(h2f);
+    if (!state.log.length) secF.append(el("p", "empty-row", "أي مهمة تنقلها إلى منتهي تنحفظ هنا ببطاقتها وملاحظاتها."));
+    var groups = {};
+    state.log.forEach(function(e){ var k = keyOf(e.doneAt); (groups[k] = groups[k] || []).push(e); });
+    var days = Object.keys(groups).sort().reverse(), limit = addDays(t, -6), hidden = 0;
+    days.forEach(function(k){
+      if (!showAllDone && k < limit) { hidden += groups[k].length; return; }
+      secF.append(el("h3", "dayh", label(k)));
+      var g = el("div", "grid");
+      groups[k].sort(function(x, y){ return y.doneAt - x.doneAt; }).forEach(function(e){
+        var tag = {big: "طابور", dropped: "أُخرجت من الطابور", daily: "يومية", deleg: "عند " + (e.who || "")}[e.kind] || "";
+        var w = e.kind === "deleg" ? "أخذت عنده " + workDays(e.days || 1) : e.days ? "أخذت " + workDays(e.days) : "";
+        g.append(card({r: {type: "log", id: e.id}, kind: e.kind === "dropped" ? "dropped" : e.kind, tag: tag, title: e.title, meta: clock(e.doneAt), sub: w, nk: e.nk, cls: "fin"}));
+      });
+      secF.append(g);
+    });
+    if (hidden || showAllDone && days.some(function(k){ return k < limit; })) {
+      secF.append(plainBtn("link more", showAllDone ? "إخفاء الأقدم" : "عرض الأقدم (" + hidden + ")", function(){ showAllDone = !showAllDone; render(); }));
+    }
+    frag.append(secF);
+
+    // footer
+    var ft = el("footer");
+    var opt = el("label", "opt"), cb = el("input"); cb.type = "checkbox"; cb.checked = state.workdaysOnly;
+    cb.addEventListener("change", function(){ state.workdaysOnly = cb.checked; change(); });
+    opt.append(cb, document.createTextNode("أيام العمل من الأحد إلى الخميس"));
+    var bk = el("div", "backup");
+    bk.append(plainBtn("link", "تنزيل نسخة احتياطية", exportData), plainBtn("link", "استرجاع نسخة", importData));
+    ft.append(opt, bk, statusEl);
+    frag.append(ft);
+
+    // panel
+    var item = resolve(openRef);
+    if (openRef && !item) openRef = null;
+    if (item) frag.append(panel(item, drafts));
+
+    root.replaceChildren(frag);
+    document.body.classList.toggle("locked", !!item);
+    if (pnl || item) { var np = root.querySelector(".panel .pbody"); if (np && pnl) np.scrollTop = pScroll; }
+    if (focusK) {
+      var f = root.querySelector('[data-k="' + cssEsc(focusK) + '"]');
+      if (f) { f.focus(); try { if (selStart != null) f.setSelectionRange(selStart, selStart); } catch(e) {} }
+    }
+  }
+
+  function runText(tg, run){
+    var o = openOf(tg.sess);
+    return run && o ? "تعمل عليها الآن، من الساعة " + clock(o[0]) + " (" + dur(Date.now() - o[0]) + ")" : "متوقفة مؤقتًا";
+  }
+  function metaText(tg){
+    var t = today(), days = sessDays(tg.sess), ms = sessMs(tg.sess);
+    var m = tg.kind === "daily" ? (tg.p.date === t ? "مهمة اليوم" : "متأخرة من " + label(tg.p.date)) : since(tg.b.startedAt);
+    return m + (days ? "، اشتغلت عليها " + workDays(days) + (ms >= 60000 ? " (" + dur(ms) + ")" : "") : "، لم تبدأ العمل عليها بعد");
+  }
+
+  function column(name, info){
+    var box = el("section", "col"), h = el("h2", null, name);
+    if (info) h.append(el("small", info[0] || "", info[1]));
+    var list = el("div", "stack");
+    box.append(h, list);
+    return {box: box, list: list};
+  }
+
+  function card(o){
+    var c = el("article", "card k-" + o.kind + (o.cur ? " cur" : "") + (o.cls ? " " + o.cls : ""));
+    c.tabIndex = 0; c.setAttribute("role", "button"); c.setAttribute("aria-label", "افتح بطاقة: " + o.title);
+    var top = el("div", "ctop");
+    top.append(el("span", "ctag", o.tag || ""));
+    if (o.meta) top.append(el("span", "cmeta" + (o.metaCls ? " " + o.metaCls : ""), o.meta));
+    c.append(top, el("h3", "ctitle", o.title));
+    var bot = el("div", "cbot"), info = el("span", "cinfo");
+    var parts = [];
+    if (o.sub) parts.push(o.sub);
+    var n = o.nk ? notesOf(o.nk).length : 0;
+    if (n) parts.push(n === 1 ? "ملاحظة واحدة" : n === 2 ? "ملاحظتان" : n + " ملاحظات");
+    info.textContent = parts.join("، ");
+    bot.append(info);
+    if (o.badge) bot.append(el("span", "badge", o.badge));
+    if (o.quick) {
+      var qb = el("button", "quick", "✓"); qb.type = "button";
+      qb.title = o.quickLabel || "نقل إلى منتهي"; qb.setAttribute("aria-label", qb.title);
+      qb.addEventListener("click", function(ev){ ev.stopPropagation(); o.quick(); });
+      bot.append(qb);
+    }
+    c.append(bot);
+    c.addEventListener("click", function(){ open(o.r); });
+    c.addEventListener("keydown", function(ev){ if (ev.target === c && (ev.key === "Enter" || ev.key === " ")) { ev.preventDefault(); open(o.r); } });
+    return c;
+  }
+
+  function panel(item, drafts){
+    var t = today();
+    var wrap = el("div", "overlay");
+    var scrim = el("div", "scrim"); scrim.addEventListener("click", closePanel);
+    var p = el("div", "panel"); p.setAttribute("role", "dialog"); p.setAttribute("aria-modal", "true");
+    var head = el("div", "phead");
+    var kindName = {daily: "مهمة يومية", up: "مهمة يومية", big: "مهمة كبيرة", deleg: "عند غيري", log: "منتهي"}[item.type];
+    head.append(el("span", "pkind", kindName));
+    var x = el("button", "close", "×"); x.type = "button"; x.setAttribute("aria-label", "إغلاق"); x.addEventListener("click", closePanel);
+    head.append(x);
+    p.append(head);
+
+    var body = el("div", "pbody");
+    var tk = "pt:" + item.nk;
+    var ti = el("textarea", "ptitle"); ti.rows = 1; ti.dataset.k = tk; ti.setAttribute("aria-label", "عنوان المهمة");
+    ti.value = drafts[tk] != null && drafts[tk] !== item.title && document.activeElement && document.activeElement.dataset && document.activeElement.dataset.k === tk ? drafts[tk] : item.title;
+    function saveTitle(){ var v = ti.value.trim(); if (v && v !== item.title) rename(item, v); }
+    ti.addEventListener("keydown", function(e){ if (e.key === "Enter" && !e.isComposing) { e.preventDefault(); ti.blur(); } });
+    ti.addEventListener("blur", saveTitle);
+    body.append(ti);
+
+    // facts + actions
+    var facts = [], acts = el("div", "pacts");
+    var tg = target(), run = running();
+    if (item.type === "daily") {
+      var pp = item.p, isF = tg && tg.kind === "daily" && tg.p.k === pp.k, dd = sessDays(dsess(pp.k));
+      facts.push(pp.date === t ? "مهمة اليوم" : "متأخرة من " + label(pp.date));
+      facts.push(dd ? "اشتغلت عليها " + workDays(dd) + " (" + dur(sessMs(dsess(pp.k))) + ")" : "لم تبدأ العمل عليها بعد");
+      if (isF) acts.append(plainBtn("primary", run ? "إيقاف مؤقت" : (dd ? "أكمل" : "ابدأ"), run ? pause : resume));
+      else acts.append(plainBtn("primary", "اشتغل عليها", function(){ workOn(pp); }));
+      acts.append(plainBtn("secondary", "نقل إلى منتهي", function(){ openRef = null; finishDaily(pp); }));
+      acts.append(armed("danger", "حذف التكرار", "يحذفها من كل الأيام، اضغط مرة ثانية", function(){ openRef = null; deleteDaily(pp.tp); }));
+    } else if (item.type === "up") {
+      facts.push("تبدأ " + label(item.tp.start));
+      acts.append(armed("danger", "حذف التكرار", "اضغط مرة ثانية للحذف", function(){ openRef = null; deleteDaily(item.tp); }));
+    } else if (item.type === "big") {
+      var b = item.b, isA = b === active(), bd = sessDays(b.sess);
+      if (isA) {
+        facts.push(since(b.startedAt));
+        facts.push(bd ? "اشتغلت عليها " + workDays(bd) + " (" + dur(sessMs(b.sess)) + ")" : "لم تبدأ العمل عليها بعد");
+        if (tg && tg.kind === "big") acts.append(plainBtn("primary", run ? "إيقاف مؤقت" : (bd ? "أكمل" : "ابدأ"), run ? pause : resume));
+        else acts.append(plainBtn("primary", "اشتغل عليها", function(){ workOn(null); }));
+        acts.append(armed("secondary", "نقل إلى منتهي", "متأكد؟ اضغط مرة ثانية", function(){ openRef = null; finishBig(b, false); }));
+        acts.append(armed("danger", "إخراجها من الطابور", "اضغط مرة ثانية لإخراجها", function(){ openRef = null; finishBig(b, true); }));
+      } else {
+        var qq = queued(), i = qq.indexOf(b);
+        facts.push("رقم " + (i + 1) + " في الطابور، أُضيفت " + label(keyOf(b.createdAt)));
+        var up = plainBtn("secondary", "تقديمها", function(){ moveQueued(b, -1); }); up.disabled = i <= 0;
+        var dn = plainBtn("secondary", "تأخيرها", function(){ moveQueued(b, 1); }); dn.disabled = i >= qq.length - 1;
+        acts.append(up, dn);
+        acts.append(armed("secondary", "نقل إلى منتهي", "متأكد؟ اضغط مرة ثانية", function(){ openRef = null; finishBig(b, false); }));
+        acts.append(armed("danger", "حذف", "اضغط مرة ثانية للحذف", function(){ openRef = null; removeBig(b); }));
+      }
+    } else if (item.type === "deleg") {
+      var d = item.d;
+      facts.push("عند " + d.who + " من " + label(keyOf(d.createdAt)) + "، يوم العمل " + countWork(keyOf(d.createdAt), t));
+      facts.push(d.followed ? "آخر متابعة " + label(keyOf(d.followed)) + " الساعة " + clock(d.followed) : "لم تتابع بعد");
+      acts.append(plainBtn("primary", "تابعت", function(){ followUp(d); }));
+      acts.append(plainBtn("secondary", "استلمتها، نقل إلى منتهي", function(){ openRef = null; finishDeleg(d); }));
+      acts.append(armed("danger", "حذف", "اضغط مرة ثانية للحذف", function(){ openRef = null; removeDeleg(d); }));
+    } else if (item.type === "log") {
+      var e = item.e;
+      var tag = {big: "من الطابور", dropped: "أُخرجت من الطابور", daily: "مهمة يومية", deleg: "كانت عند " + (e.who || "")}[e.kind] || "";
+      facts.push(tag + "، انتهت " + label(keyOf(e.doneAt)) + " الساعة " + clock(e.doneAt));
+      if (e.kind === "deleg") facts.push("أخذت عنده " + workDays(e.days || 1));
+      else if (e.days) facts.push("أخذت " + workDays(e.days) + (e.ms >= 60000 ? " (" + dur(e.ms) + ")" : ""));
+      if (canUndo(e)) acts.append(plainBtn("secondary", e.kind === "big" || e.kind === "dropped" ? "إرجاعها لآخر الطابور" : "إرجاعها", function(){ openRef = null; undoLog(e); }));
+    }
+    var fl = el("ul", "facts"); facts.forEach(function(f){ fl.append(el("li", null, f)); });
+    body.append(fl);
+    if (acts.children.length) body.append(acts);
+
+    // notes
+    var ns = el("section", "notes");
+    var list = notesOf(item.nk);
+    ns.append(el("h4", null, list.length ? "الملاحظات" : "لا توجد ملاحظات بعد"));
+    var nul = el("ul");
+    list.forEach(function(n){
+      var li = el("li");
+      var meta = el("div", "nmeta");
+      meta.append(el("span", null, label(keyOf(n.at)) + " الساعة " + clock(n.at)));
+      var dx = armed("ndel", "حذف", "متأكد؟", function(){ delNote(item.nk, n); });
+      meta.append(dx);
+      li.append(meta, el("p", "ntext", n.text));
+      nul.append(li);
+    });
+    ns.append(nul);
+    var nk = "note:" + item.nk;
+    var ta = el("textarea", "nin"); ta.rows = 3; ta.placeholder = "اكتب ملاحظتك…"; ta.dataset.k = nk; ta.setAttribute("aria-label", "ملاحظة جديدة");
+    if (drafts[nk]) ta.value = drafts[nk];
+    var addB = plainBtn("primary small", "أضف الملاحظة", function(){ var v = ta.value.trim(); if (!v) { ta.focus(); return; } ta.value = ""; addNote(item.nk, v); });
+    ta.addEventListener("keydown", function(e){ if (e.key === "Enter" && (e.ctrlKey || e.metaKey)) { e.preventDefault(); addB.click(); } });
+    var nrow = el("div", "nrow"); nrow.append(el("span", "hint", "Ctrl + Enter للإضافة"), addB);
+    ns.append(ta, nrow);
+    body.append(ns);
+    p.append(body);
+    wrap.append(scrim, p);
+    return wrap;
+  }
+
+  function addDelegRow(drafts){
+    var row = el("div", "add two");
+    var ti = el("input"); ti.type = "text"; ti.placeholder = "مهمة كلّفت بها أحدًا"; ti.dataset.k = "dg"; ti.setAttribute("aria-label", "المهمة");
+    var wi = el("input"); wi.type = "text"; wi.placeholder = "عند مين؟"; wi.dataset.k = "dgw"; wi.className = "whoin"; wi.setAttribute("aria-label", "عند مين"); wi.setAttribute("list", "people");
+    if (drafts.dg) ti.value = drafts.dg;
+    if (drafts.dgw) wi.value = drafts.dgw;
+    var dl = el("datalist"); dl.id = "people";
+    Array.from(new Set(state.delegated.map(function(d){ return d.who; }))).forEach(function(n){ var o = el("option"); o.value = n; dl.append(o); });
+    function go(e){
+      if (e.key !== "Enter" || e.isComposing) return;
+      var a = ti.value.trim(), b = wi.value.trim();
+      if (!a) { ti.focus(); return; }
+      if (!b) { wi.focus(); return; }
+      ti.value = ""; wi.value = ""; ti.focus(); addDelegated(a, b);
+    }
+    ti.addEventListener("keydown", go); wi.addEventListener("keydown", go);
+    row.append(el("span", "plus", "+"), ti, wi, dl);
+    return row;
+  }
+  function addRow(k, ph, val, fn){
+    var row = el("div", "add");
+    var inp = el("input"); inp.type = "text"; inp.placeholder = ph; inp.dataset.k = k; inp.setAttribute("aria-label", ph);
+    if (val) inp.value = val;
+    inp.addEventListener("keydown", function(e){
+      if (e.key === "Enter" && !e.isComposing) { var v = inp.value.trim(); if (!v) return; inp.value = ""; fn(v); }
+    });
+    row.append(el("span", "plus", "+"), inp);
+    return row;
+  }
+  function armed(cls, text, confirmText, fn){
+    var b = el("button", cls, text), on = false, tm = null; b.type = "button";
+    b.addEventListener("click", function(){
+      if (!on) { on = true; b.textContent = confirmText; b.classList.add("armed");
+        tm = setTimeout(function(){ on = false; b.textContent = text; b.classList.remove("armed"); }, 3500); }
+      else { clearTimeout(tm); fn(); }
+    });
+    return b;
+  }
+  function plainBtn(cls, txt, fn){ var b = el("button", cls, txt); b.type = "button"; b.addEventListener("click", fn); return b; }
+  function since(ts){
+    if (!ts) return "";
+    var k = keyOf(ts);
+    return k === today() ? "جاء دورها اليوم" : "جاء دورها " + label(k);
+  }
+  function cssEsc(s){ return s.replace(/["\\]/g, "\\$&"); }
+
+  document.addEventListener("keydown", function(e){ if (e.key === "Escape" && openRef) closePanel(); });
+
+  function exportData(){
+    var blob = new Blob([JSON.stringify(state, null, 1)], {type: "application/json"});
+    var a = document.createElement("a");
+    a.href = URL.createObjectURL(blob);
+    a.download = "tabour-" + today() + ".json";
+    document.body.append(a); a.click(); a.remove();
+    setTimeout(function(){ URL.revokeObjectURL(a.href); }, 1000);
+  }
+  function importData(){
+    var inp = document.createElement("input"); inp.type = "file"; inp.accept = "application/json,.json";
+    inp.addEventListener("change", function(){
+      var f = inp.files && inp.files[0]; if (!f) return;
+      f.text().then(function(txt){
+        var s; try { s = JSON.parse(txt); } catch(e) { status("الملف ليس نسخة صالحة"); return; }
+        if (!s || !Array.isArray(s.big) || !Array.isArray(s.daily)) { status("الملف ليس نسخة صالحة"); return; }
+        if (!confirm("سيستبدل هذا كل المهام الحالية في هذا المتصفح. متابعة؟")) return;
+        state = normalize(s); openRef = null; change(); status("تم استرجاع النسخة");
+      });
+    });
+    inp.click();
+  }
+
+  // ---------- saving ----------
+  var statusEl = el("span", "status");
+  function status(s){ statusEl.textContent = s; }
+  function change(){ render(); save(); }
+  function save(){
+    if (mode === "local") { try { localStorage.setItem(KEY, JSON.stringify(state)); status("محفوظ في هذا المتصفح"); } catch(e) { status("تعذّر الحفظ"); } return; }
+    if (mode !== "db") return;
+    status("جارٍ الحفظ…");
+    clearTimeout(timer); timer = setTimeout(function(){ timer = null; writeNow(); }, 500);
+  }
+  function writeNow(){
+    if (writing) { again = true; return; }
+    var json = JSON.stringify(state);
+    if (json === lastJson) { status("محفوظ"); return; }
+    writing = true;
+    var attempt = function(retry){
+      return ref.set({json: json, at: Date.now()}).then(function(){ lastJson = json; status("محفوظ"); }, function(e){
+        if (e && e.code === "unavailable" && !retry) return new Promise(function(r){ setTimeout(r, 800 + Math.random() * 800); }).then(function(){ return attempt(true); });
+        status(e && e.code === "quota_exceeded" ? "امتلأت مساحة الحفظ" : "تعذّر الحفظ، سيُعاد عند التعديل القادم");
+      });
+    };
+    attempt(false).then(function(){ writing = false; if (again) { again = false; writeNow(); } });
+  }
+
+  // ---------- connect ----------
+  function use(n){ try { return (window.claude && window.claude.use) ? Promise.resolve(window.claude.use(n)) : Promise.resolve(null); } catch(e) { return Promise.resolve(null); } }
+  function goLocal(){
+    mode = "local";
+    var s = null;
+    try { s = JSON.parse(localStorage.getItem(KEY) || "null"); } catch(e) {}
+    if (!s) { try { s = JSON.parse(document.getElementById("seed").textContent); } catch(e) {} }
+    if (s) state = normalize(s);
+    loaded = true; status("محفوظ في هذا المتصفح"); render();
+    if (s) save();
+  }
+  Promise.all([use("db"), use("user")]).then(function(r){
+    var db = r[0], user = r[1];
+    if (!db || !user) return goLocal();
+    return user.id().then(function(id){
+      if (!id) return goLocal();
+      ref = db.doc("data/users/" + id + "/state");
+      mode = "db";
+      var to = setTimeout(function(){ if (!loaded) { loaded = true; render(); } status("تعذّر الوصول للبيانات حتى الآن، قد تكون غير محدّثة"); }, 10000);
+      ref.onSnapshot(function(snap){
+        if (!snap.metadata.fromCache) { clearTimeout(to); }
+        if (snap.metadata.hasPendingWrites) return;
+        if (!snap.exists) {
+          if (!snap.metadata.fromCache && !loaded) { loaded = true; status("جاهز"); render(); }
+          return;
+        }
+        var j = snap.data().json;
+        if (typeof j !== "string" || j === lastJson) { if (!loaded) { loaded = true; render(); } return; }
+        if (timer || writing) return;
+        try { state = normalize(JSON.parse(j)); lastJson = JSON.stringify(state) === j ? j : lastJson; } catch(e) { return; }
+        lastJson = j;
+        loaded = true; if (!snap.metadata.fromCache) status("محفوظ"); render();
+      }, function(e){
+        clearTimeout(to); loaded = true;
+        status(e && e.code === "revoked" ? "للعرض فقط" : "تعذّر الوصول للبيانات");
+        render();
+      });
+    });
+  }, goLocal);
+
+  // live clock for the running task, and day rollover
+  var lastDay = today();
+  setInterval(function(){
+    if (!loaded) return;
+    if (today() !== lastDay) { lastDay = today(); render(); return; }
+    var rl = document.getElementById("runline"), tg = target();
+    if (rl && tg) rl.textContent = runText(tg, running());
+  }, 30000);
+
+  function el(tag, cls, text){ var n = document.createElement(tag); if (cls) n.className = cls; if (text != null) n.textContent = text; return n; }
+  function uid(){ return Date.now().toString(36) + Math.random().toString(36).slice(2,7); }
+
+  render();
+})();
+</script>
+</body>
+</html>
